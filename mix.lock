@@ -1,0 +1,5 @@
+%{
+  "bbmustache": {:hex, :bbmustache, "1.12.1", "857fbdf86bda46d07201b0e7a969820cb763a7c174c485fd0780d7e033efe9f0", [:rebar3], [], "hexpm", "f4320778c31a821a2a664db8894618abb79c1af7bbf7c03c703c8868d9bb09fe"},
+  "yamerl": {:hex, :yamerl, "0.8.1", "07da13ffa1d8e13948943789665c62ccd679dfa7b324a4a2ed3149df17f453a4", [:rebar3], [], "hexpm", "96cb30f9d64344fed0ef8a92e9f16f207de6c04dfff4f366752ca79f5bceb23f"},
+  "yaml_elixir": {:hex, :yaml_elixir, "2.7.0", "6f731d622a3b28769e26e634f82aa171d1d01cae0e8820ce9e93e559c83c23c8", [:mix], [{:yamerl, "~> 0.8", [hex: :yamerl, repo: "hexpm", optional: false]}], "hexpm", "f2eb39e0fb23625777f74e0c821f42f033dc4eaa5402c34beaa665944d85f3ea"},
+}
