@@ -1,25 +1,31 @@
 defmodule AddressFormattingTest do
   use ExUnit.Case
   doctest AddressFormatting
-  import AddressFormatting
+  require TestHelper
 
-  test "minimal test" do
-    %{"components" => components, "expected" => expected} = parse_yaml("address-formatting/testcases/other/xx.yaml")
-    template = 
-      """
-      {{{city}}}
-      {{{state}}}
-      {{{country}}}
-      """
-    assert expected == render(template, components)
-  end
+  test "addresses" do
+    for input_tuple <-
+          AddressFormatting.FileHelpers.load_testcases_other() do
+      TestHelper.assert_render(input_tuple, &AddressFormatting.render/1)
+    end
 
-  test "minimal not fake test" do
-    %{"components" => components, "expected" => expected} = parse_yaml("address-formatting/testcases/other/null.yaml")
-    template = 
-      """
-      {{{island}}}
-      """
-    assert expected == render(template, components)
+    :rand.seed(:exsss, {1, 2, 6})
+
+    for {_, data} = input_tuple <-
+          AddressFormatting.FileHelpers.load_testcases_countries() |> Enum.shuffle(),
+        reduce: {0, 0} do
+      {success, fail} ->
+        IO.inspect({success, fail})
+
+        if data["expected"] == AddressFormatting.render(data["components"]) do
+          {success + 1, fail}
+        else
+          IO.inspect(data["components"])
+          IO.inspect(data["expected"])
+          IO.inspect(AddressFormatting.render(data["components"]))
+          {success, fail + 1}
+          # TestHelper.assert_render(input_tuple, &AddressFormatting.render/1)
+        end
+    end
   end
 end
