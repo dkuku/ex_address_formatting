@@ -6,9 +6,9 @@ defmodule AddressFormatting do
 
   @attentions ~w[address address29 attraction bakery bank bar building cafe] ++
                 ~w[clinic collage courthouse doctors embassy farm_land fast_food] ++
-                ~w[guest_house hospital hotel library mall museum name pharmacy] ++
-                ~w[place_of_worship post_box post_office pub public_building] ++
-                ~w[restaurant school shop sports_centre supermarket townhall university]
+                ~w[furniture guest_house hospital hotel library mall museum name pharmacy] ++
+                ~w[place_of_worship post_box post_office pub public_building restaurant] ++
+                ~w[school shop sports_centre supermarket theatre townhall university]
   @state_codes FileHelpers.load_yaml("state_codes")
   @county_codes FileHelpers.load_yaml("county_codes")
   @country_codes FileHelpers.load_yaml("country_codes")
