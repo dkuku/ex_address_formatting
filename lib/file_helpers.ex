@@ -17,35 +17,43 @@ defmodule AddressFormatting.FileHelpers do
         |> hd()
         |> String.upcase()
 
-      {country_code, load_yaml(path, directory, filename)}
+      {country_code, load_yaml(filename, directory: directory, conf_path: path)}
     end)
     |> Map.new()
   end
 
-  def load_yaml(name) do
+  def load_yaml(name, opts \\ []) do
     filename = Enum.join([name, "yaml"], ".")
-
-    Path.join([File.cwd!(), @conf_path, filename])
-    |> parse_yaml()
-  end
-
-  def load_yaml(directory, name) do
-    filename = Enum.join([name, "yaml"], ".")
-
-    Path.join([File.cwd!(), @conf_path, directory, filename])
-    |> parse_yaml()
-  end
-
-  def load_yaml(conf_path, directory, name) do
-    filename = Enum.join([name, "yaml"], ".")
+    directory = Keyword.get(opts, :directory, "")
+    conf_path = Keyword.get(opts, :conf_path, @conf_path)
+    all = Keyword.get(opts, :all, false)
 
     Path.join([File.cwd!(), conf_path, directory, filename])
-    |> parse_yaml()
+    |> parse_yaml(all)
   end
 
-  def parse_yaml(path) do
-    case YamlElixir.read_from_file(path) do
-      {:ok, result} -> result
+  def parse_yaml(path, all \\ false) do
+    case all do
+      false -> YamlElixir.read_from_file!(path)
+      _ -> YamlElixir.read_all_from_file!(path)
     end
+  end
+
+  def load_components() do
+    load_yaml("components", all: true)
+    |> Enum.reduce(%{}, fn map, acc ->
+      name = Map.get(map, "name")
+      acc = Map.put(acc, name, name)
+
+      case Map.get(map, "aliases") do
+        nil ->
+          acc
+
+        aliases ->
+          Enum.reduce(aliases, acc, fn single_alias, nested_acc ->
+            Map.put(nested_acc, single_alias, name)
+          end)
+      end
+    end)
   end
 end

@@ -2,20 +2,20 @@ defmodule AddressFormatting do
   @moduledoc """
   Documentation for `AddressFormatting`.
   """
-  import AddressFormatting.FileHelpers
+  alias AddressFormatting.FileHelpers
 
   @attentions ~w[address address29 attraction bakery bank bar building cafe] ++
                 ~w[clinic collage courthouse doctors embassy farm_land fast_food] ++
                 ~w[guest_house hospital hotel library mall museum name pharmacy] ++
                 ~w[place_of_worship post_box post_office pub public_building] ++
                 ~w[restaurant school shop sports_centre supermarket townhall university]
-  @state_codes load_yaml("state_codes")
-  @county_codes load_yaml("county_codes")
-  @country_codes load_yaml("country_codes")
-  @country2lang load_yaml("country2lang")
-  @components load_yaml("components")
-  @worldwide load_yaml("countries", "worldwide")
-  @all_components load_abbreviations()
+  @state_codes FileHelpers.load_yaml("state_codes")
+  @county_codes FileHelpers.load_yaml("county_codes")
+  @country_codes FileHelpers.load_yaml("country_codes")
+  @country2lang FileHelpers.load_yaml("country2lang")
+  @components FileHelpers.load_components()
+  @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
+  @all_components FileHelpers.load_abbreviations()
 
   def state_codes(), do: @state_codes
   def county_codes(), do: @county_codes
@@ -24,6 +24,7 @@ defmodule AddressFormatting do
   def load_components(), do: @components
   def load_worldwide(), do: @worldwide
   def all_components(), do: @all_components
+  def attentions(), do: @attentions
 
   def render(variables) do
     case get_template(variables) do
@@ -116,8 +117,8 @@ defmodule AddressFormatting do
 
       country_data ->
         with {:ok, variables} <- check_country_case(variables, country_data),
+             {:ok, variables} <- convert_component_aliases(variables, country_data),
              {:ok, variables} <- convert_keys_to_attention(variables, country_data),
-             {:ok, variables} <- convert_pedestrian(variables, country_data),
              {:ok, variables} <- add_postformat(variables, country_data),
              {:ok, variables} <- run_replace(variables, country_data),
              {:ok, variables} <- check_use_country(variables, country_data),
@@ -167,14 +168,20 @@ defmodule AddressFormatting do
     end
   end
 
-  def convert_pedestrian(variables, _country_data) do
-    road = Map.get(variables, "pedestrian")
+  def convert_component_aliases(variables, _country_data) do
+    variables =
+      variables
+      |> Enum.reduce(%{}, fn {key, v}, acc ->
+        case Map.get(@components, key) do
+          nil ->
+            Map.put(acc, key, v)
 
-    if road do
-      {:ok, Map.put(variables, "road", road)}
-    else
-      {:ok, variables}
-    end
+          new_key ->
+            Map.put(acc, new_key, v)
+        end
+      end)
+
+    {:ok, variables}
   end
 
   def convert_keys_to_attention(variables, _country_data) do
