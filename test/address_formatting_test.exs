@@ -25,7 +25,7 @@ defmodule AddressFormattingTest do
 
     """
     -------------------------------------
-    Ran #{success + failed} tests 
+    Ran #{success + failed} tests at #{Date.utc_today()}
     #{trunc(100 * success / (success + failed))}% successfully
     #{success} success
     #{failed} failed
