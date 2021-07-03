@@ -11,21 +11,27 @@ defmodule AddressFormattingTest do
 
     :rand.seed(:exsss, {1, 2, 6})
 
-    for {_, data} = input_tuple <-
-          AddressFormatting.FileHelpers.load_testcases_countries() |> Enum.shuffle(),
-        reduce: {0, 0} do
-      {success, fail} ->
-        IO.inspect({success, fail})
+    {success, failed} =
+      for {_, data} = input_tuple <-
+            AddressFormatting.FileHelpers.load_testcases_countries() |> Enum.shuffle(),
+          reduce: {0, 0} do
+        {success, fail} ->
+          if TestHelper.assert_render(input_tuple, &AddressFormatting.render/1) do
+            {success + 1, fail}
+          else
+            {success, fail + 1}
+          end
+      end
 
-        if data["expected"] == AddressFormatting.render(data["components"]) do
-          {success + 1, fail}
-        else
-          IO.inspect(data["components"])
-          IO.inspect(data["expected"])
-          IO.inspect(AddressFormatting.render(data["components"]))
-          {success, fail + 1}
-          # TestHelper.assert_render(input_tuple, &AddressFormatting.render/1)
-        end
-    end
+    """
+    -------------------------------------
+    Ran #{success + failed} tests 
+    #{trunc(100 * success / (success + failed))}% successfully
+    #{success} success
+    #{failed} failed
+    -------------------------------------
+    """
+    |> TestHelper.log_to_readme
+    |> IO.puts
   end
 end
