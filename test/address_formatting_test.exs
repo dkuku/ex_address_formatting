@@ -6,17 +6,15 @@ defmodule AddressFormattingTest do
   test "addresses" do
     for input_tuple <-
           AddressFormatting.FileHelpers.load_testcases_other() do
-      AddressHelper.assert_render(input_tuple, &AddressFormatting.render/1)
+      AddressHelper.assert_render(input_tuple)
     end
-
-    :rand.seed(:exsss, {1, 2, 6})
 
     {success, failed} =
       for {_, data} = input_tuple <-
-            AddressFormatting.FileHelpers.load_testcases_countries() |> Enum.shuffle(),
+            AddressFormatting.FileHelpers.load_testcases_countries(),
           reduce: {0, 0} do
         {success, fail} ->
-          if AddressHelper.assert_render(input_tuple, &AddressFormatting.render/1) do
+          if AddressHelper.assert_render(input_tuple) do
             {success + 1, fail}
           else
             {success, fail + 1}

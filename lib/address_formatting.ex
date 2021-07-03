@@ -4,11 +4,6 @@ defmodule AddressFormatting do
   """
   alias AddressFormatting.FileHelpers
 
-  @attentions ~w[address address29 attraction bakery bank bar building cafe] ++
-                ~w[clinic collage courthouse doctors embassy farm_land fast_food] ++
-                ~w[furniture guest_house hospital hotel library mall museum name pharmacy] ++
-                ~w[place_of_worship post_box post_office pub public_building restaurant] ++
-                ~w[school shop sports_centre supermarket theatre townhall university]
   @state_codes FileHelpers.load_yaml("state_codes")
   @county_codes FileHelpers.load_yaml("county_codes")
   @country_codes FileHelpers.load_yaml("country_codes")
@@ -17,6 +12,7 @@ defmodule AddressFormatting do
   @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
   @all_components FileHelpers.load_abbreviations()
 
+  @standard_keys ["island"] ++ Map.keys(@components)
   def state_codes(), do: @state_codes
   def county_codes(), do: @county_codes
   def country_codes(), do: @country_codes
@@ -24,9 +20,9 @@ defmodule AddressFormatting do
   def load_components(), do: @components
   def load_worldwide(), do: @worldwide
   def all_components(), do: @all_components
-  def attentions(), do: @attentions
+  def standard_keys(), do: @standard_keys
 
-  def render(variables) do
+  def render(variables) when is_map(variables) do
     case get_template(variables) do
       {nil, _} ->
         variables
@@ -36,11 +32,11 @@ defmodule AddressFormatting do
         |> Kernel.<>("\n")
 
       {template, updated_variables} ->
-        render(template, updated_variables)
+        render({template, updated_variables})
     end
   end
 
-  def render(template, variables) do
+  def render({template, variables}) do
     first_function = fn string, render_fn ->
       string
       |> render_fn.()
@@ -63,11 +59,12 @@ defmodule AddressFormatting do
     |> Kernel.<>("\n")
   end
 
-  def fix_duplicates(string, variables) do
+  def fix_duplicates(string, _variables) do
     string
     |> String.split("\n")
-    |> List.foldr([], fn current, acc -> 
+    |> List.foldr([], fn current, acc ->
       previous = List.first(acc)
+
       if current == previous do
         acc
       else
@@ -117,6 +114,7 @@ defmodule AddressFormatting do
         with {:ok, variables} <- check_country_case(variables, country_data),
              {:ok, variables} <- convert_component_aliases(variables, country_data),
              {:ok, variables} <- convert_keys_to_attention(variables, country_data),
+             {:ok, variables} <- convert_to_code(variables, country_data),
              {:ok, variables} <- add_postformat(variables, country_data),
              {:ok, variables} <- run_replace(variables, country_data),
              {:ok, variables} <- check_use_country(variables, country_data),
@@ -129,10 +127,28 @@ defmodule AddressFormatting do
 
   def default_postformat_regex() do
     [
-      [~r/[\n]{2,}/, "\n"],
-      [~r/[\s,]*\n[-\s,]*/, "\n"],
-      [~r/^\n/, ""],
-      [~r/[ ]{2,}/, " "]
+      [~r/\&#39\;/, "'"],
+      [~r/[\},\s]+$/, ""],
+      [~r/^[,\s]+/, ""],
+      # linestarting with dash due to a parameter missing
+      [~r/^- /, ""],
+      # multiple commas to one
+      [~r/,\s*,/, ", "],
+      # one horiz whitespace behind comma
+      [~r/\h+,\h+/, ", "],
+      # multiple horiz whitespace to one
+      [~r/\h\h+/, " "],
+      # horiz whitespace, newline to newline
+      [~r/\h\n/, "\n"],
+      # newline comma to just newline
+      [~r/\n,/, "\n"],
+      # multiple commas to one
+      [~r/,,+/, ","],
+      # comma newline to just newline
+      [~r/,\n/, "\n"],
+      # newline plus space to newline
+      [~r/\n\h+/, "\n"],
+      [~r/\n\n+/, "\n"]
     ]
   end
 
@@ -182,12 +198,16 @@ defmodule AddressFormatting do
     {:ok, variables}
   end
 
+  def convert_to_code(variables, _country_data) do
+    {:ok, variables}
+  end
+
   def convert_keys_to_attention(variables, _country_data) do
     attention =
       variables
-      |> Map.take(@attentions)
-      |> Enum.reject(&is_nil/1)
-      |> maybe_hd()
+      |> Map.drop(@standard_keys)
+      |> Map.values()
+      |> Enum.join(", ")
 
     if attention do
       {:ok, Map.put(variables, "attention", attention)}
@@ -219,7 +239,4 @@ defmodule AddressFormatting do
 
   def upcase(nil), do: nil
   def upcase(string), do: String.upcase(string)
-  def maybe_hd(nil), do: nil
-  def maybe_hd([]), do: nil
-  def maybe_hd([{_k, v} | _t]), do: v
 end
