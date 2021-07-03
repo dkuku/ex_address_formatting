@@ -25,8 +25,8 @@ defmodule AddressHelper do
     end
   end
 
-  defmacro assert_render(input_tuple, render_fn) do
-    quote bind_quoted: [data: input_tuple, render_fn: render_fn] do
+  defmacro assert_render(input_tuple) do
+    quote bind_quoted: [data: input_tuple] do
       {file,
        %{
          "components" => components,
