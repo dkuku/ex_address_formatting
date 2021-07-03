@@ -59,23 +59,21 @@ defmodule AddressFormatting do
     :bbmustache.compile(template, variables, key_type: :binary)
     |> String.trim()
     |> run_postformat_replace(variables)
-    |> fix_country(variables)
+    |> fix_duplicates(variables)
     |> Kernel.<>("\n")
   end
 
-  def fix_country(string, variables) do
-    country = Map.get(variables, "country")
-
+  def fix_duplicates(string, variables) do
     string
     |> String.split("\n")
-    |> Enum.reverse()
-    |> Kernel.then(fn
-      [a, a | b] -> [a | b]
-      # [^country | rest] -> [country | rest]
-      # other -> [country | other]
-      other -> other
+    |> List.foldr([], fn current, acc -> 
+      previous = List.first(acc)
+      if current == previous do
+        acc
+      else
+        [current | acc]
+      end
     end)
-    |> Enum.reverse()
     |> Enum.join("\n")
   end
 
@@ -171,7 +169,7 @@ defmodule AddressFormatting do
   def convert_component_aliases(variables, _country_data) do
     variables =
       variables
-      |> Enum.reduce(%{}, fn {key, v}, acc ->
+      |> Enum.reduce(variables, fn {key, v}, acc ->
         case Map.get(@components, key) do
           nil ->
             Map.put(acc, key, v)
