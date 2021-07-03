@@ -1,12 +1,12 @@
 defmodule AddressFormattingTest do
   use ExUnit.Case
   doctest AddressFormatting
-  require TestHelper
+  require AddressHelper
 
   test "addresses" do
     for input_tuple <-
           AddressFormatting.FileHelpers.load_testcases_other() do
-      TestHelper.assert_render(input_tuple, &AddressFormatting.render/1)
+      AddressHelper.assert_render(input_tuple, &AddressFormatting.render/1)
     end
 
     :rand.seed(:exsss, {1, 2, 6})
@@ -16,7 +16,7 @@ defmodule AddressFormattingTest do
             AddressFormatting.FileHelpers.load_testcases_countries() |> Enum.shuffle(),
           reduce: {0, 0} do
         {success, fail} ->
-          if TestHelper.assert_render(input_tuple, &AddressFormatting.render/1) do
+          if AddressHelper.assert_render(input_tuple, &AddressFormatting.render/1) do
             {success + 1, fail}
           else
             {success, fail + 1}
@@ -31,7 +31,7 @@ defmodule AddressFormattingTest do
     #{failed} failed
     -------------------------------------
     """
-    |> TestHelper.log_to_readme
+    |> AddressHelper.log_to_readme
     |> IO.puts
   end
 end
