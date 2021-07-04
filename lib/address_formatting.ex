@@ -4,18 +4,16 @@ defmodule AddressFormatting do
   """
   alias AddressFormatting.FileHelpers
 
-  @state_codes FileHelpers.load_yaml("state_codes")
-  @county_codes FileHelpers.load_yaml("county_codes")
-  @country_codes FileHelpers.load_yaml("country_codes")
+  @state_codes FileHelpers.load_yaml_reverse("state_codes")
+  @county_codes FileHelpers.load_yaml_reverse("county_codes")
   @country2lang FileHelpers.load_yaml("country2lang")
-  @components FileHelpers.load_components()
+  @components FileHelpers.load_components() |> Map.drop(["suburb"])
   @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
   @all_components FileHelpers.load_abbreviations()
 
-  @standard_keys ["island"] ++ Map.keys(@components)
-  def state_codes(), do: @state_codes
-  def county_codes(), do: @county_codes
-  def country_codes(), do: @country_codes
+  @standard_keys ["island", "suburb"] ++ Map.keys(@components)
+  def get_codes_dict("state"), do: @state_codes
+  def get_codes_dict("county"), do: @county_codes
   def country2lang(), do: @country2lang
   def load_components(), do: @components
   def load_worldwide(), do: @worldwide
@@ -114,7 +112,10 @@ defmodule AddressFormatting do
         with {:ok, variables} <- check_country_case(variables, country_data),
              {:ok, variables} <- convert_component_aliases(variables, country_data),
              {:ok, variables} <- convert_keys_to_attention(variables, country_data),
-             {:ok, variables} <- convert_to_code(variables, country_data),
+             {:ok, variables} <- convert_constants(variables, country_data),
+             {:ok, variables} <- convert_country_numeric(variables, country_data),
+             {:ok, variables} <- add_codes(variables, country_data, "county"),
+             {:ok, variables} <- add_codes(variables, country_data, "state"),
              {:ok, variables} <- add_postformat(variables, country_data),
              {:ok, variables} <- run_replace(variables, country_data),
              {:ok, variables} <- check_use_country(variables, country_data),
@@ -132,6 +133,7 @@ defmodule AddressFormatting do
       [~r/^[,\s]+/, ""],
       # linestarting with dash due to a parameter missing
       [~r/^- /, ""],
+      [~r/\n\h-/, "\n"],
       # multiple commas to one
       [~r/,\s*,/, ", "],
       # one horiz whitespace behind comma
@@ -198,8 +200,66 @@ defmodule AddressFormatting do
     {:ok, variables}
   end
 
-  def convert_to_code(variables, _country_data) do
+  def convert_constants(variables, _country_data) do
+    variables =
+      case Map.get(variables, "country_code") do
+        "UK" ->
+          Map.put(variables, "country_code", "GB")
+
+        "NL" ->
+          state = Map.get(variables, "state")
+
+          cond do
+            state == "Curaçao" ->
+              %{variables | "country" => "Curaçao", "country_code" => "CW"}
+
+            String.downcase(state) =~ "sint maarten" ->
+              %{variables | "country" => "Sint Maarten", "country_code" => "SX"}
+
+            String.downcase(state) =~ "aruba" ->
+              %{variables | "country" => "Aruba", "country_code" => "AW"}
+
+            true ->
+              variables
+          end
+
+        _other ->
+          variables
+      end
+
     {:ok, variables}
+  end
+
+  def convert_country_numeric(variables, _country_data) do
+    country = Map.get(variables, "country")
+
+    variables =
+      if is_integer?(country) do
+        {state, variables} = Map.pop(variables, "state")
+        Map.put(variables, "country", state)
+      else
+        variables
+      end
+
+    {:ok, variables}
+  end
+
+  def add_codes(variables, _country_data, key) do
+    country_code = Map.get(variables, "country_code")
+
+    updated_variables =
+      case Map.get(variables, key) do
+        nil ->
+          variables
+
+        state ->
+          case get_in(get_codes_dict(key), [country_code, state]) do
+            nil -> variables
+            code -> Map.put(variables, key <> "_code", code)
+          end
+      end
+
+    {:ok, updated_variables}
   end
 
   def convert_keys_to_attention(variables, _country_data) do
@@ -239,4 +299,11 @@ defmodule AddressFormatting do
 
   def upcase(nil), do: nil
   def upcase(string), do: String.upcase(string)
+  def is_integer?(val) when is_integer(val), do: true
+
+  def is_integer?(val) when is_bitstring(val) do
+    Regex.match?(~r{\A\d*\z}, val)
+  end
+
+  def is_integer?(_), do: false
 end

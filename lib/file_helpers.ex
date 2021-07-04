@@ -22,6 +22,15 @@ defmodule AddressFormatting.FileHelpers do
     |> Map.new()
   end
 
+  def load_yaml_reverse(name) do
+    name
+    |> load_yaml()
+    |> Enum.map(fn {cc, map} ->
+      {cc, Map.new(Enum.map(map, fn {k, v} -> {v, k} end))}
+    end)
+    |> Map.new()
+  end
+
   def load_yaml(name, opts \\ []) do
     filename = Enum.join([name, "yaml"], ".")
     directory = Keyword.get(opts, :directory, "")

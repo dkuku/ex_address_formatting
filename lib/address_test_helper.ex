@@ -12,16 +12,19 @@ defmodule AddressHelper do
     list
     |> Enum.map(&str_or_tuple/1)
     |> Enum.join()
-    end
+  end
 
   def log_to_readme(data) do
     case System.get_env(@env_var) do
-      nil -> data
+      nil ->
+        data
+
       _ ->
-    File.open(@filename, [:append]) 
-    |> elem(1) 
-    |> IO.binwrite(data) 
-    data
+        File.open(@filename, [:append])
+        |> elem(1)
+        |> IO.binwrite(data)
+
+        data
     end
   end
 
@@ -36,7 +39,6 @@ defmodule AddressHelper do
 
       {template, variables} = data = AddressFormatting.get_template(components)
       rendered = AddressFormatting.render(data)
-      
 
       case ExUnit.Diff.compute(expected, rendered, :==) do
         {%ExUnit.Diff{equivalent?: true}, _} ->
@@ -55,6 +57,7 @@ defmodule AddressHelper do
           |> Enum.each(fn {a, b} -> IO.puts("#{a}: #{b}") end)
 
           IO.puts("---")
+
           variables
           |> Map.delete("postformat_replace")
           |> Enum.each(fn {a, b} -> IO.puts("#{a}: #{b}") end)

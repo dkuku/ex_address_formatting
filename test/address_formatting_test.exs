@@ -10,7 +10,7 @@ defmodule AddressFormattingTest do
     end
 
     {success, failed} =
-      for {_, data} = input_tuple <-
+      for {_, _data} = input_tuple <-
             AddressFormatting.FileHelpers.load_testcases_countries(),
           reduce: {0, 0} do
         {success, fail} ->
@@ -29,7 +29,7 @@ defmodule AddressFormattingTest do
     #{failed} failed
     -------------------------------------
     """
-    |> AddressHelper.log_to_readme
-    |> IO.puts
+    |> AddressHelper.log_to_readme()
+    |> IO.puts()
   end
 end

@@ -10,8 +10,8 @@ def deps do
 end
 ```
 -------------------------------------
-Ran 249 tests at 2021-07-03
-85% successfully
-214 success
-35 failed
+Ran 249 tests at 2021-07-04
+88% successfully
+221 success
+28 failed
 -------------------------------------
