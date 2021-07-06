@@ -1,10 +1,7 @@
 defmodule AddressFormatting.FileHelpers do
   @conf_path "address-formatting/conf"
-  @test_path "address-formatting/testcases"
 
   def load_abbreviations(), do: load_directory(@conf_path, "abbreviations")
-  def load_testcases_other(), do: load_directory(@test_path, "other")
-  def load_testcases_countries(), do: load_directory(@test_path, "countries")
 
   def load_directory(path, directory) do
     [File.cwd!(), path, directory]

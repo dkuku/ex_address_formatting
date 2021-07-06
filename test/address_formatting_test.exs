@@ -5,13 +5,13 @@ defmodule AddressFormattingTest do
 
   test "addresses" do
     for input_tuple <-
-          AddressFormatting.FileHelpers.load_testcases_other() do
+          AddressHelper.load_testcases_other() do
       AddressHelper.assert_render(input_tuple)
     end
 
     {success, failed} =
       for {_, _data} = input_tuple <-
-            AddressFormatting.FileHelpers.load_testcases_countries(),
+            AddressHelper.load_testcases_countries(),
           reduce: {0, 0} do
         {success, fail} ->
           if AddressHelper.assert_render(input_tuple) do

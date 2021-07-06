@@ -1,6 +1,15 @@
 defmodule AddressHelper do
   @filename "README.md"
   @env_var "README"
+  @test_path "address-formatting/testcases"
+
+  def load_testcases_other() do
+    AddressFormatting.FileHelpers.load_directory(@test_path, "other")
+  end
+
+  def load_testcases_countries() do
+    AddressFormatting.FileHelpers.load_directory(@test_path, "countries")
+  end
 
   def str_or_tuple(str) when is_binary(str), do: str
 

@@ -11,7 +11,7 @@ defmodule AddressFormatting do
   @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
   @all_components FileHelpers.load_abbreviations()
 
-  @standard_keys ["island", "suburb"] ++ Map.keys(@components)
+  @standard_keys ["suburb"] ++ Map.keys(@components)
   def get_codes_dict("state"), do: @state_codes
   def get_codes_dict("county"), do: @county_codes
   def country2lang(), do: @country2lang
