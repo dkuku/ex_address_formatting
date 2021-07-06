@@ -15,8 +15,8 @@ defmodule AddressFormatting do
   def get_codes_dict("state"), do: @state_codes
   def get_codes_dict("county"), do: @county_codes
   def country2lang(), do: @country2lang
-  def load_components(), do: @components
-  def load_worldwide(), do: @worldwide
+  def components(), do: @components
+  def worldwide(), do: @worldwide
   def all_components(), do: @all_components
   def standard_keys(), do: @standard_keys
 
@@ -104,9 +104,9 @@ defmodule AddressFormatting do
   def get_template(variables) do
     country_code = Map.get(variables, "country_code") |> upcase()
 
-    case Map.get(@worldwide, country_code) do
+    case Map.get(worldwide(), country_code) do
       nil ->
-        {get_in(@worldwide, ["default", "fallback_template"]), variables}
+        {get_in(worldwide(), ["default", "fallback_template"]), variables}
 
       country_data ->
         with {:ok, variables} <- check_country_case(variables, country_data),
@@ -121,7 +121,7 @@ defmodule AddressFormatting do
              {:ok, variables} <- check_use_country(variables, country_data),
              {:ok, variables} <- add_component(variables, country_data),
              {:ok, variables} <- check_change_country(variables, country_data) do
-          {get_in(@worldwide, [variables["country_code"], "address_template"]), variables}
+          {get_in(worldwide(), [variables["country_code"], "address_template"]), variables}
         end
     end
   end
@@ -188,7 +188,7 @@ defmodule AddressFormatting do
     variables =
       variables
       |> Enum.reduce(variables, fn {key, v}, acc ->
-        case Map.get(@components, key) do
+        case Map.get(components(), key) do
           nil ->
             Map.put(acc, key, v)
 
