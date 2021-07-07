@@ -56,9 +56,7 @@ defmodule AddressFormatting.FileHelpers do
           acc
 
         aliases ->
-          Enum.reduce(aliases, acc, fn single_alias, nested_acc ->
-            Map.put(nested_acc, single_alias, name)
-          end)
+          Enum.reduce(aliases, acc, &Map.put(&2, &1, name))
       end
     end)
   end

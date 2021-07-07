@@ -19,8 +19,7 @@ defmodule AddressHelper do
 
   def colorize_diff(list) do
     list
-    |> Enum.map(&str_or_tuple/1)
-    |> Enum.join()
+    |> Enum.map_join(&str_or_tuple/1)
   end
 
   def log_to_readme(data) do

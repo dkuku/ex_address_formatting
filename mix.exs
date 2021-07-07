@@ -22,7 +22,8 @@ defmodule AddressFormatting.MixProject do
   defp deps do
     [
       {:bbmustache, "~> 1.12"},
-      {:yaml_elixir, "~> 2.7"}
+      {:yaml_elixir, "~> 2.7"},
+      {:benchee, "~> 1.0", only: :dev}
     ]
   end
 end

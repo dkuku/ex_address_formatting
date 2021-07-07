@@ -2,23 +2,7 @@ defmodule AddressFormatting do
   @moduledoc """
   Documentation for `AddressFormatting`.
   """
-  alias AddressFormatting.FileHelpers
-
-  @state_codes FileHelpers.load_yaml_reverse("state_codes")
-  @county_codes FileHelpers.load_yaml_reverse("county_codes")
-  @country2lang FileHelpers.load_yaml("country2lang")
-  @components FileHelpers.load_components() |> Map.drop(["suburb"])
-  @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
-  @all_components FileHelpers.load_abbreviations()
-
-  @standard_keys ["suburb"] ++ Map.keys(@components)
-  def get_codes_dict("state"), do: @state_codes
-  def get_codes_dict("county"), do: @county_codes
-  def country2lang(), do: @country2lang
-  def components(), do: @components
-  def worldwide(), do: @worldwide
-  def all_components(), do: @all_components
-  def standard_keys(), do: @standard_keys
+  alias AddressFormatting.Constants
 
   def render(variables) when is_map(variables) do
     case get_template(variables) do
@@ -104,9 +88,9 @@ defmodule AddressFormatting do
   def get_template(variables) do
     country_code = Map.get(variables, "country_code") |> upcase()
 
-    case Map.get(worldwide(), country_code) do
+    case Map.get(Constants.worldwide(), country_code) do
       nil ->
-        {get_in(worldwide(), ["default", "fallback_template"]), variables}
+        {get_in(Constants.worldwide(), ["default", "fallback_template"]), variables}
 
       country_data ->
         with {:ok, variables} <- check_country_case(variables, country_data),
@@ -121,7 +105,8 @@ defmodule AddressFormatting do
              {:ok, variables} <- check_use_country(variables, country_data),
              {:ok, variables} <- add_component(variables, country_data),
              {:ok, variables} <- check_change_country(variables, country_data) do
-          {get_in(worldwide(), [variables["country_code"], "address_template"]), variables}
+          {get_in(Constants.worldwide(), [variables["country_code"], "address_template"]),
+           variables}
         end
     end
   end
@@ -188,7 +173,7 @@ defmodule AddressFormatting do
     variables =
       variables
       |> Enum.reduce(variables, fn {key, v}, acc ->
-        case Map.get(components(), key) do
+        case Map.get(Constants.components(), key) do
           nil ->
             Map.put(acc, key, v)
 
@@ -253,7 +238,7 @@ defmodule AddressFormatting do
           variables
 
         state ->
-          case get_in(get_codes_dict(key), [country_code, state]) do
+          case get_in(Constants.get_codes_dict(key), [country_code, state]) do
             nil -> variables
             code -> Map.put(variables, key <> "_code", code)
           end
@@ -265,7 +250,7 @@ defmodule AddressFormatting do
   def convert_keys_to_attention(variables, _country_data) do
     attention =
       variables
-      |> Map.drop(@standard_keys)
+      |> Map.drop(Constants.standard_keys())
       |> Map.values()
       |> Enum.join(", ")
 

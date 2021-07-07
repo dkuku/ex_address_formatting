@@ -1,5 +1,7 @@
 %{
   "bbmustache": {:hex, :bbmustache, "1.12.1", "857fbdf86bda46d07201b0e7a969820cb763a7c174c485fd0780d7e033efe9f0", [:rebar3], [], "hexpm", "f4320778c31a821a2a664db8894618abb79c1af7bbf7c03c703c8868d9bb09fe"},
+  "benchee": {:hex, :benchee, "1.0.1", "66b211f9bfd84bd97e6d1beaddf8fc2312aaabe192f776e8931cb0c16f53a521", [:mix], [{:deep_merge, "~> 1.0", [hex: :deep_merge, repo: "hexpm", optional: false]}], "hexpm", "3ad58ae787e9c7c94dd7ceda3b587ec2c64604563e049b2a0e8baafae832addb"},
+  "deep_merge": {:hex, :deep_merge, "1.0.0", "b4aa1a0d1acac393bdf38b2291af38cb1d4a52806cf7a4906f718e1feb5ee961", [:mix], [], "hexpm", "ce708e5f094b9cd4e8f2be4f00d2f4250c4095be93f8cd6d018c753894885430"},
   "yamerl": {:hex, :yamerl, "0.8.1", "07da13ffa1d8e13948943789665c62ccd679dfa7b324a4a2ed3149df17f453a4", [:rebar3], [], "hexpm", "96cb30f9d64344fed0ef8a92e9f16f207de6c04dfff4f366752ca79f5bceb23f"},
   "yaml_elixir": {:hex, :yaml_elixir, "2.7.0", "6f731d622a3b28769e26e634f82aa171d1d01cae0e8820ce9e93e559c83c23c8", [:mix], [{:yamerl, "~> 0.8", [hex: :yamerl, repo: "hexpm", optional: false]}], "hexpm", "f2eb39e0fb23625777f74e0c821f42f033dc4eaa5402c34beaa665944d85f3ea"},
 }
