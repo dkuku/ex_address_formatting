@@ -3,41 +3,28 @@ defmodule AddressFormatting do
   Documentation for `AddressFormatting`.
   """
   alias AddressFormatting.Constants
+  alias AddressFormatting.Address
 
   def render(variables) when is_map(variables) do
     case get_template(variables) do
-      {nil, _} ->
+      {nil, _, _} ->
         variables
         |> Map.delete("country_code")
         |> Map.values()
         |> Enum.join("\n")
         |> Kernel.<>("\n")
 
-      {template, updated_variables} ->
-        render({template, updated_variables})
+      data ->
+        render(data)
     end
   end
 
-  def render({template, variables}) do
-    first_function = fn string, render_fn ->
-      string
-      |> render_fn.()
-      |> String.split("||", trim: true)
-      |> Enum.map(&String.trim/1)
-      |> Enum.reject(&(&1 == ""))
-      |> Kernel.then(fn
-        [] -> ""
-        [head | _] -> head
-      end)
-    end
-
-    variables = Map.put(variables, "first", first_function)
-    template = :bbmustache.parse_binary(template)
-
-    :bbmustache.compile(template, variables, key_type: :binary)
+  @spec render({String.t(), Address.t() | map, list}) :: String.t()
+  def render({template, address, postformat}) do
+    :bbmustache.compile(template, address, key_type: :atom)
     |> String.trim()
-    |> run_postformat_replace(variables)
-    |> fix_duplicates(variables)
+    |> run_postformat(postformat)
+    |> fix_duplicates(address)
     |> Kernel.<>("\n")
   end
 
@@ -56,23 +43,23 @@ defmodule AddressFormatting do
     |> Enum.join("\n")
   end
 
-  def run_postformat_replace(rendered, variables) do
-    variables
-    |> Map.get("postformat_replace", [])
+  def run_postformat(rendered, postformat) do
+    postformat
     |> Enum.reduce(rendered, fn [from, to], rendered_acc ->
       Regex.replace(from, rendered_acc, to)
     end)
   end
 
-  def run_replace(variables_org, country_data) do
-    variables_new =
+  def run_replace(address, country_data) do
+    address_new =
       country_data
       |> Map.get("replace", [])
-      |> Enum.reduce(variables_org, fn [field_from, to], variables ->
+      |> Enum.reduce(address, fn [field_from, to], variables ->
         [field, from] =
           case String.split(field_from, "=") do
-            [from | []] -> ["country", from]
-            [field, from] -> [field, from]
+            [from | []] -> [:country, from]
+            ["country_code", from] -> [:country_code, String.upcase(from)]
+            [field, from] -> [String.to_existing_atom(field), from]
           end
 
         case Map.get(variables, field) do
@@ -82,31 +69,38 @@ defmodule AddressFormatting do
         end
       end)
 
-    {:ok, variables_new}
+    {:ok, address_new}
   end
 
   def get_template(variables) do
     country_code = Map.get(variables, "country_code") |> upcase()
 
-    case Map.get(Constants.worldwide(), country_code) do
+    case Map.get(Constants.worldwide_data(), country_code) do
       nil ->
-        {get_in(Constants.worldwide(), ["default", "fallback_template"]), variables}
+        {
+          Constants.fallback_template(),
+          struct(Address, variables),
+          []
+        }
 
       country_data ->
-        with {:ok, variables} <- check_country_case(variables, country_data),
-             {:ok, variables} <- convert_component_aliases(variables, country_data),
-             {:ok, variables} <- convert_keys_to_attention(variables, country_data),
-             {:ok, variables} <- convert_constants(variables, country_data),
-             {:ok, variables} <- convert_country_numeric(variables, country_data),
-             {:ok, variables} <- add_codes(variables, country_data, "county"),
-             {:ok, variables} <- add_codes(variables, country_data, "state"),
-             {:ok, variables} <- add_postformat(variables, country_data),
-             {:ok, variables} <- run_replace(variables, country_data),
-             {:ok, variables} <- check_use_country(variables, country_data),
-             {:ok, variables} <- add_component(variables, country_data),
-             {:ok, variables} <- check_change_country(variables, country_data) do
-          {get_in(Constants.worldwide(), [variables["country_code"], "address_template"]),
-           variables}
+        with address <- %Address{},
+             {:ok, address} <- check_country_case(address, variables, country_data),
+             {:ok, address} <- convert_component_aliases(address, variables, country_data),
+             {:ok, address} <- convert_constants(address, country_data),
+             {:ok, address} <- convert_country_numeric(address),
+             {:ok, address} <- add_codes(address, :county_code),
+             {:ok, address} <- add_codes(address, :state_code),
+             {:ok, address} <- run_replace(address, country_data),
+             {:ok, address} <- check_use_country(address, country_data),
+             {:ok, address} <- add_component(address, country_data),
+             {:ok, address} <- check_change_country(address, country_data),
+             {:ok, postformat} <- get_postformat(country_data) do
+          {
+            get_in(Constants.worldwide_templates(), [String.upcase(address.country_code)]),
+            address,
+            postformat
+          }
         end
     end
   end
@@ -139,7 +133,7 @@ defmodule AddressFormatting do
     ]
   end
 
-  def add_postformat(variables, country_data) do
+  def get_postformat(country_data) do
     postformat =
       case Map.get(country_data, "postformat_replace") do
         nil ->
@@ -154,131 +148,132 @@ defmodule AddressFormatting do
           end)
       end
 
-    {:ok, Map.put(variables, "postformat_replace", postformat)}
+    {:ok, postformat}
   end
 
-  def add_component(variables, country_data) do
+  def add_component(address, country_data) do
     case Map.get(country_data, "add_component") do
       nil ->
-        {:ok, variables}
+        {:ok, address}
 
       add_component ->
-        [field, value] = String.split(add_component, "=")
+        case String.split(add_component, "=") do
+          ["country_code", value] ->
+            {:ok, %Address{address | country_code: value}}
 
-        {:ok, Map.put(variables, field, value)}
+          [field, value] ->
+            {:ok, Map.put(address, to_existing_atom(field, :attention), value)}
+        end
     end
   end
 
-  def convert_component_aliases(variables, _country_data) do
-    variables =
+  def convert_component_aliases(address, variables, _country_data) do
+    components = Constants.components()
+
+    {address, _comp = %{}} =
       variables
-      |> Enum.reduce(variables, fn {key, v}, acc ->
-        case Map.get(Constants.components(), key) do
+      |> Enum.reduce({address, variables}, fn {key, v}, {acc_add, acc_var} ->
+        atom_key = to_existing_atom(key, :attention)
+
+        case Map.get(components, atom_key) do
           nil ->
-            Map.put(acc, key, v)
+            {
+              %Address{acc_add | attention: v},
+              Map.delete(acc_var, key)
+            }
 
           new_key ->
-            Map.put(acc, new_key, v)
+            {
+              Map.put(acc_add, new_key, v),
+              Map.delete(acc_var, to_string(key))
+            }
         end
       end)
 
-    {:ok, variables}
+    {:ok, address}
   end
 
-  def convert_constants(variables, _country_data) do
+  def convert_constants(address, _country_data) do
     variables =
-      case Map.get(variables, "country_code") do
+      case Map.get(address, :country_code) do
         "UK" ->
-          Map.put(variables, "country_code", "GB")
+          Map.put(address, :country_code, "GB")
 
         "NL" ->
-          state = Map.get(variables, "state")
+          state = Map.get(address, :state)
 
           cond do
+            state == nil ->
+              address
+
             state == "Curaçao" ->
-              %{variables | "country" => "Curaçao", "country_code" => "CW"}
+              %{address | country: "Curaçao", country_code: "CW"}
 
             String.downcase(state) =~ "sint maarten" ->
-              %{variables | "country" => "Sint Maarten", "country_code" => "SX"}
+              %{address | country: "Sint Maarten", country_code: "SX"}
 
             String.downcase(state) =~ "aruba" ->
-              %{variables | "country" => "Aruba", "country_code" => "AW"}
+              %{address | country: "Aruba", country_code: "AW"}
 
             true ->
-              variables
+              address
           end
 
         _other ->
-          variables
+          address
       end
 
-    {:ok, variables}
+    {:ok, address}
   end
 
-  def convert_country_numeric(variables, _country_data) do
-    country = Map.get(variables, "country")
-
-    variables =
-      if is_integer?(country) do
-        {state, variables} = Map.pop(variables, "state")
-        Map.put(variables, "country", state)
+  def convert_country_numeric(address) do
+    address =
+      if is_integer?(address.country) do
+        %Address{address | country: address.state, state: nil}
       else
-        variables
+        address
       end
 
-    {:ok, variables}
+    {:ok, address}
   end
 
-  def add_codes(variables, _country_data, key) do
-    country_code = Map.get(variables, "country_code")
+  def add_codes(address, key) do
+    country_code = address.country_code
 
-    updated_variables =
-      case Map.get(variables, key) do
+    updated_address =
+      case Map.get(address, key) do
         nil ->
-          variables
+          address
 
         state ->
           case get_in(Constants.get_codes_dict(key), [country_code, state]) do
-            nil -> variables
-            code -> Map.put(variables, key <> "_code", code)
+            nil -> address
+            code -> Map.put(address, key, code)
           end
       end
 
-    {:ok, updated_variables}
+    {:ok, address}
   end
 
-  def convert_keys_to_attention(variables, _country_data) do
-    attention =
-      variables
-      |> Map.drop(Constants.standard_keys())
-      |> Map.values()
-      |> Enum.join(", ")
-
-    if attention do
-      {:ok, Map.put(variables, "attention", attention)}
-    else
-      {:ok, variables}
-    end
-  end
-
-  def check_change_country(variables, country_data) do
+  def check_change_country(address, country_data) do
     case Map.get(country_data, "change_country") do
       nil ->
-        {:ok, variables}
+        {:ok, address}
 
       change_country ->
-        {:ok, Map.replace(variables, "country", change_country)}
+        {:ok, %Address{address | country: change_country}}
     end
   end
 
-  def check_country_case(variables, _country_data) do
-    {:ok, Map.update!(variables, "country_code", &String.upcase/1)}
+  def check_country_case(address, variables, _country_data) do
+    country_code = Map.get(variables, "country_code")
+    {:ok, Map.put(address, :country_code, String.upcase(country_code))}
   end
 
-  def check_use_country(variables, country_data) do
+  def check_use_country(address, country_data) do
     case Map.get(country_data, "use_country") do
-      nil -> {:ok, variables}
-      country_code -> {:ok, Map.put(variables, "country_code", country_code)}
+      nil -> {:ok, address}
+      country_code -> {:ok, %Address{address | country_code: String.upcase(country_code)}}
     end
   end
 
@@ -291,4 +286,14 @@ defmodule AddressFormatting do
   end
 
   def is_integer?(_), do: false
+
+  def to_existing_atom(key, default) do
+    try do
+      String.to_existing_atom(key)
+    rescue
+      e ->
+        IO.puts("#{key}: is not an existing atom")
+        default
+    end
+  end
 end

@@ -49,14 +49,14 @@ defmodule AddressFormatting.FileHelpers do
     load_yaml("components", all: true)
     |> Enum.reduce(%{}, fn map, acc ->
       name = Map.get(map, "name")
-      acc = Map.put(acc, name, name)
+      acc = Map.put(acc, String.to_atom(name), String.to_atom(name))
 
       case Map.get(map, "aliases") do
         nil ->
           acc
 
         aliases ->
-          Enum.reduce(aliases, acc, &Map.put(&2, &1, name))
+          Enum.reduce(aliases, acc, &Map.put(&2, String.to_atom(&1), String.to_atom(name)))
       end
     end)
   end

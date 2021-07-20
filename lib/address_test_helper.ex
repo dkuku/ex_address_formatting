@@ -45,7 +45,7 @@ defmodule AddressHelper do
          "expected" => expected
        }} = data
 
-      {template, variables} = data = AddressFormatting.get_template(components)
+      {template, variables, _} = data = AddressFormatting.get_template(components)
       rendered = AddressFormatting.render(data)
 
       case ExUnit.Diff.compute(expected, rendered, :==) do
@@ -58,17 +58,13 @@ defmodule AddressHelper do
           Test: #{file} - #{description}
           expected: #{AddressHelper.colorize_diff(left)}
           rendered: #{AddressHelper.colorize_diff(right)}
-          #{template}
           """)
 
           components
           |> Enum.each(fn {a, b} -> IO.puts("#{a}: #{b}") end)
 
           IO.puts("---")
-
-          variables
-          |> Map.delete("postformat_replace")
-          |> Enum.each(fn {a, b} -> IO.puts("#{a}: #{b}") end)
+          IO.puts(variables)
 
           false
       end
