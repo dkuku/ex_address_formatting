@@ -86,8 +86,8 @@ defmodule AddressFormatting do
       country_data ->
         with address <- %Address{},
              {:ok, address} <- check_country_case(address, variables, country_data),
-             {:ok, address} <- convert_component_aliases(address, variables, country_data),
-             {:ok, address} <- convert_constants(address, country_data),
+             {:ok, address} <- convert_component_aliases(address, variables),
+             {:ok, address} <- convert_constants(address),
              {:ok, address} <- convert_country_numeric(address),
              {:ok, address} <- add_codes(address, :county_code),
              {:ok, address} <- add_codes(address, :state_code),
@@ -167,33 +167,29 @@ defmodule AddressFormatting do
     end
   end
 
-  def convert_component_aliases(address, variables, _country_data) do
+  def convert_component_aliases(address, variables) do
     components = Constants.components()
 
-    {address, _comp = %{}} =
+    address =
       variables
-      |> Enum.reduce({address, variables}, fn {key, v}, {acc_add, acc_var} ->
+      |> Enum.reduce(address, fn {key, v}, acc_add ->
         atom_key = to_existing_atom(key, :attention)
 
         case Map.get(components, atom_key) do
           nil ->
-            {
-              %Address{acc_add | attention: v},
-              Map.delete(acc_var, key)
-            }
+              %Address{acc_add | attention: v}
 
           new_key ->
-            {
-              Map.put(acc_add, new_key, v),
-              Map.delete(acc_var, to_string(key))
-            }
+            atom_key = to_existing_atom(new_key, :attention)
+            new_value = adjust_value(v, atom_key)
+              Map.put(acc_add, atom_key, new_value)
         end
       end)
 
     {:ok, address}
   end
 
-  def convert_constants(address, _country_data) do
+  def convert_constants(address) do
     variables =
       case Map.get(address, :country_code) do
         "UK" ->
@@ -287,6 +283,10 @@ defmodule AddressFormatting do
 
   def is_integer?(_), do: false
 
+  def adjust_value(value, :postcode) when is_bitstring(value) and byte_size(value) > 9, do: nil
+  def adjust_value(value, key), do: value
+
+  def to_existing_atom(key, _) when is_atom(key), do: key
   def to_existing_atom(key, default) do
     try do
       String.to_existing_atom(key)
