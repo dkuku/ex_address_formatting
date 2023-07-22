@@ -11,11 +11,8 @@ defmodule AddressHelper do
     AddressFormatting.FileHelpers.load_directory(@test_path, "countries")
   end
 
-  def str_or_tuple(str) when is_binary(str), do: str
-
-  def str_or_tuple({_, _, str}) do
-    IO.ANSI.format([:red, str])
-  end
+  def str_or_tuple({:true, str}), do: str
+  def str_or_tuple({:false, str}), do: IO.ANSI.format([:red, str])
 
   def colorize_diff(list) do
     list
@@ -52,7 +49,7 @@ defmodule AddressHelper do
         {%ExUnit.Diff{equivalent?: true}, _} ->
           true
 
-        {%ExUnit.Diff{left: {_, _, left}, right: {_, _, right}}, _} ->
+        {%ExUnit.Diff{left: %{contents: left}, right: %{contents: right}}, _} ->
           IO.puts("""
           =================================
           Test: #{file} - #{description}
