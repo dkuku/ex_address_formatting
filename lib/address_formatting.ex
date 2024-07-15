@@ -177,12 +177,12 @@ defmodule AddressFormatting do
 
         case Map.get(components, atom_key) do
           nil ->
-              %Address{acc_add | attention: v}
+            %Address{acc_add | attention: v}
 
           new_key ->
             atom_key = to_existing_atom(new_key, :attention)
             new_value = adjust_value(v, atom_key)
-              Map.put(acc_add, atom_key, new_value)
+            Map.put(acc_add, atom_key, new_value)
         end
       end)
 
@@ -190,7 +190,7 @@ defmodule AddressFormatting do
   end
 
   def convert_constants(address) do
-    variables =
+    address =
       case Map.get(address, :country_code) do
         "UK" ->
           Map.put(address, :country_code, "GB")
@@ -236,7 +236,7 @@ defmodule AddressFormatting do
   def add_codes(address, key) do
     country_code = address.country_code
 
-    updated_address =
+    address =
       case Map.get(address, key) do
         nil ->
           address
@@ -284,14 +284,15 @@ defmodule AddressFormatting do
   def is_integer?(_), do: false
 
   def adjust_value(value, :postcode) when is_bitstring(value) and byte_size(value) > 9, do: nil
-  def adjust_value(value, key), do: value
+  def adjust_value(value, _key), do: value
 
   def to_existing_atom(key, _) when is_atom(key), do: key
+
   def to_existing_atom(key, default) do
     try do
       String.to_existing_atom(key)
     rescue
-      e ->
+      _e ->
         IO.puts("#{key}: is not an existing atom")
         default
     end

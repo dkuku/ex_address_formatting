@@ -24,7 +24,7 @@ defmodule AddressFormatting.Address do
 
     def slice(map) do
       size = map_size(map)
-      {:ok, size, &Enumerable.List.slice(:maps.to_list(map), &1, &2, size)}
+      {:ok, size, &:maps.to_list/1}
     end
 
     def reduce(map, acc, fun) do

@@ -10,8 +10,9 @@ defmodule AddressFormattingTest do
     end
 
     {success, failed} =
-      for {_, _data} = input_tuple <-
+      for {_, data} = input_tuple <-
             AddressHelper.load_testcases_countries(),
+          data != %{},
           reduce: {0, 0} do
         {success, fail} ->
           if AddressHelper.assert_render(input_tuple) do

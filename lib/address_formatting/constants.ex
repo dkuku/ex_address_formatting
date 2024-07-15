@@ -6,11 +6,12 @@ defmodule AddressFormatting.Constants do
   @country2lang FileHelpers.load_yaml("country2lang")
   @components FileHelpers.load_components()
   @worldwide FileHelpers.load_yaml("worldwide", directory: "countries")
+
   @fallback_template get_in(@worldwide, ["default", "fallback_template"])
                      |> :bbmustache.parse_binary()
   @worldwide_templates :maps.filtermap(
                          fn
-                           k, v when is_map_key(v, "address_template") ->
+                           _k, v when is_map_key(v, "address_template") ->
                              {true, :bbmustache.parse_binary(v["address_template"])}
 
                            _, _ ->
@@ -20,7 +21,7 @@ defmodule AddressFormatting.Constants do
                        )
   @worldwide_data :maps.filtermap(
                     fn
-                      k, v when is_map(v) ->
+                      _k, v when is_map(v) ->
                         {true, :maps.without(["address_template", "fallback_template"], v)}
 
                       _, _ ->
