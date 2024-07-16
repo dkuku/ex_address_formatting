@@ -2,35 +2,43 @@ defmodule AddressFormattingTest do
   use ExUnit.Case
   doctest AddressFormatting
   require AddressHelper
+  alias AddressFormatting.FileHelpers
+  @test_path "address-formatting/testcases"
 
-  test "addresses" do
-    for input_tuple <-
-          AddressHelper.load_testcases_other() do
-      AddressHelper.assert_render(input_tuple)
-    end
+  for input_tuple <- FileHelpers.load_directory(@test_path, "other") do
+    {file,
+     %{
+       "components" => components,
+       "description" => description,
+       "expected" => expected
+     }} = input_tuple
 
-    {success, failed} =
-      for {_, data} = input_tuple <-
-            AddressHelper.load_testcases_countries(),
-          data != %{},
-          reduce: {0, 0} do
-        {success, fail} ->
-          if AddressHelper.assert_render(input_tuple) do
-            {success + 1, fail}
-          else
-            {success, fail + 1}
-          end
+    {template, variables, _} = data = AddressFormatting.get_template(components)
+    rendered = AddressFormatting.render(data)
+
+    describe file do
+      test description do
+        assert unquote(expected) == unquote(rendered)
       end
+    end
+  end
 
-    """
-    -------------------------------------
-    Ran #{success + failed} tests at #{Date.utc_today()}
-    #{trunc(100 * success / (success + failed))}% successfully
-    #{success} success
-    #{failed} failed
-    -------------------------------------
-    """
-    |> AddressHelper.log_to_readme()
-    |> IO.puts()
+  for input_tuple <- FileHelpers.load_directory(@test_path, "countries"),
+      elem(input_tuple, 1) != %{} do
+    {country,
+     %{
+       "components" => components,
+       "description" => description,
+       "expected" => expected
+     }} = input_tuple
+
+    {template, variables, _} = data = AddressFormatting.get_template(components)
+    rendered = AddressFormatting.render(data)
+
+    describe "Country: " <> country do
+      test description do
+        assert unquote(expected) == unquote(rendered)
+      end
+    end
   end
 end
